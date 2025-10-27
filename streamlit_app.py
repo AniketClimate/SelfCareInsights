@@ -3,7 +3,7 @@ import streamlit as st
 import io
 import os
 from datetime import datetime
-import openai
+from openai import OpenAI
 
 # Try to import document processing libraries
 try:
@@ -21,7 +21,7 @@ except ImportError:
 # Page configuration
 st.set_page_config(
     page_title="Document Insights Generator",
-    page_icon="📄",
+    page_icon="ðŸ“„",
     layout="centered",
     initial_sidebar_state="expanded"
 )
@@ -67,12 +67,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Header
-st.markdown('<div class="main-header">📄 Document Insights Generator</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header">ðŸ“„ Document Insights Generator</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-header">Upload documents, ask questions, get AI-powered insights</div>', unsafe_allow_html=True)
 
 # Sidebar configuration
 with st.sidebar:
-    st.header("⚙️ Configuration")
+    st.header("âš™ï¸ Configuration")
 
     # OpenAI API Key input
     openai_api_key = st.text_input(
@@ -84,7 +84,7 @@ with st.sidebar:
     st.markdown("---")
 
     # Instructions
-    st.markdown("### 📖 How to Use")
+    st.markdown("### ðŸ“– How to Use")
     st.markdown("""
     1. Enter your OpenAI API key above
     2. Upload your document (PDF, DOCX, TXT)
@@ -115,7 +115,7 @@ with st.sidebar:
     st.markdown("---")
 
     # Links
-    st.markdown("### 🔗 Useful Links")
+    st.markdown("### ðŸ”— Useful Links")
     st.markdown("[Get OpenAI API Key](https://platform.openai.com/api-keys)")
     st.markdown("[Check API Usage](https://platform.openai.com/usage)")
     st.markdown("[GitHub Repository](https://github.com)")
@@ -171,8 +171,8 @@ def extract_text(uploaded_file):
 def generate_insights(document_text, question, api_key, model_name, temp):
     """Generate insights using OpenAI API"""
     try:
-        # Set API key
-        openai.api_key = api_key
+        # Initialize OpenAI client
+        client = OpenAI(api_key=api_key)
 
         # Truncate if too long (to stay within token limits)
         max_chars = 12000
@@ -189,8 +189,8 @@ Document:
 
 Please provide a comprehensive answer based only on the information in the document. If the document doesn't contain enough information to answer the question, say so clearly."""
 
-        # Call OpenAI API
-        response = openai.ChatCompletion.create(
+        # Call OpenAI API with new syntax
+        response = client.chat.completions.create(
             model=model_name,
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that provides clear, detailed document analysis."},
@@ -202,14 +202,18 @@ Please provide a comprehensive answer based only on the information in the docum
 
         return response.choices[0].message.content
 
-    except openai.error.AuthenticationError:
-        return "❌ Invalid API key. Please check your OpenAI API key and try again."
-    except openai.error.RateLimitError:
-        return "❌ Rate limit exceeded. Please check your API quota or try again later."
-    except openai.error.InvalidRequestError as e:
-        return f"❌ Invalid request: {str(e)}"
     except Exception as e:
-        return f"❌ Error generating insights: {str(e)}"
+        error_msg = str(e)
+
+        # Handle common errors
+        if "authentication" in error_msg.lower() or "api key" in error_msg.lower():
+            return "âŒ Invalid API key. Please check your OpenAI API key and try again."
+        elif "rate limit" in error_msg.lower() or "quota" in error_msg.lower():
+            return "âŒ Rate limit exceeded. Please check your API quota or try again later."
+        elif "insufficient" in error_msg.lower():
+            return "âŒ Insufficient credits. Please add credits to your OpenAI account."
+        else:
+            return f"âŒ Error generating insights: {error_msg}"
 
 # Initialize session state
 if 'document_text' not in st.session_state:
@@ -220,7 +224,7 @@ if 'filename' not in st.session_state:
     st.session_state.filename = None
 
 # Main content area
-st.markdown("## 📤 Upload Your Document")
+st.markdown("## ðŸ“¤ Upload Your Document")
 
 # File uploader
 uploaded_file = st.file_uploader(
@@ -230,20 +234,20 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file:
-    st.success(f"✅ File uploaded: {uploaded_file.name} ({uploaded_file.size / 1024:.2f} KB)")
+    st.success(f"âœ… File uploaded: {uploaded_file.name} ({uploaded_file.size / 1024:.2f} KB)")
     st.session_state.filename = uploaded_file.name
 
     # Extract text button
-    if st.button("📖 Extract Text from Document"):
+    if st.button("ðŸ“– Extract Text from Document"):
         with st.spinner("Extracting text..."):
             document_text = extract_text(uploaded_file)
             st.session_state.document_text = document_text
 
             if document_text and not document_text.startswith("Error") and not document_text.startswith("Unsupported"):
-                st.success(f"✅ Text extracted successfully! ({len(document_text)} characters)")
+                st.success(f"âœ… Text extracted successfully! ({len(document_text)} characters)")
 
                 # Show preview
-                with st.expander("📄 Preview Extracted Text (first 1000 characters)"):
+                with st.expander("ðŸ“„ Preview Extracted Text (first 1000 characters)"):
                     preview_text = document_text[:1000]
                     st.text(preview_text + ("..." if len(document_text) > 1000 else ""))
             else:
@@ -252,10 +256,10 @@ if uploaded_file:
 # Question input
 if st.session_state.document_text:
     st.markdown("---")
-    st.markdown("## ❓ Ask Your Question")
+    st.markdown("## â“ Ask Your Question")
 
     # Example questions
-    with st.expander("💡 Example Questions"):
+    with st.expander("ðŸ’¡ Example Questions"):
         st.markdown("""
         - What are the main points in this document?
         - Summarize the key findings
@@ -272,13 +276,13 @@ if st.session_state.document_text:
     )
 
     # Generate insights button
-    if st.button("🤖 Generate Insights", type="primary"):
+    if st.button("ðŸ¤– Generate Insights", type="primary"):
         if not openai_api_key:
-            st.error("⚠️ Please enter your OpenAI API key in the sidebar.")
+            st.error("âš ï¸ Please enter your OpenAI API key in the sidebar.")
         elif not question:
-            st.error("⚠️ Please enter a question.")
+            st.error("âš ï¸ Please enter a question.")
         else:
-            with st.spinner("🤖 AI is analyzing your document... This may take 10-30 seconds."):
+            with st.spinner("ðŸ¤– AI is analyzing your document... This may take 10-30 seconds."):
                 insights = generate_insights(
                     st.session_state.document_text,
                     question,
@@ -292,13 +296,13 @@ if st.session_state.document_text:
 # Display insights
 if st.session_state.insights:
     st.markdown("---")
-    st.markdown("## 🎯 Insights")
+    st.markdown("## ðŸŽ¯ Insights")
 
     # Display in a nice box
     st.markdown(f'<div class="insight-box">{st.session_state.insights}</div>', unsafe_allow_html=True)
 
     # Download options
-    st.markdown("### 💾 Download Results")
+    st.markdown("### ðŸ’¾ Download Results")
 
     col1, col2 = st.columns(2)
 
@@ -321,7 +325,7 @@ Document Text (excerpt):
 """
 
         st.download_button(
-            label="📄 Download as TXT",
+            label="ðŸ“„ Download as TXT",
             data=result_text,
             file_name=f"{st.session_state.filename}_insights.txt",
             mime="text/plain"
@@ -347,14 +351,14 @@ Document Text (excerpt):
 """
 
         st.download_button(
-            label="📝 Download as MD",
+            label="ðŸ“ Download as MD",
             data=markdown_text,
             file_name=f"{st.session_state.filename}_insights.md",
             mime="text/markdown"
         )
 
     # Option to analyze again
-    if st.button("🔄 Analyze Another Document"):
+    if st.button("ðŸ”„ Analyze Another Document"):
         st.session_state.document_text = None
         st.session_state.insights = None
         st.session_state.filename = None
@@ -364,7 +368,7 @@ Document Text (excerpt):
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #666; padding: 2rem 0;'>
-    <p>Built with ❤️ using Streamlit and OpenAI</p>
+    <p>Built with â¤ï¸ using Streamlit and OpenAI</p>
     <p>No data is stored - everything happens in your browser session</p>
 </div>
 """, unsafe_allow_html=True)
